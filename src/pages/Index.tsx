@@ -6,7 +6,9 @@ import {
   TrendingUp, 
   Users,
   ChevronRight,
-  Clock
+  Clock,
+  ClipboardCheck,
+  BookUser
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -14,12 +16,18 @@ const quickActions = [
   { icon: <CheckCircle className="h-6 w-6" />, label: "Tasks", path: "/tasks", count: 5 },
   { icon: <Calendar className="h-6 w-6" />, label: "Leave", path: "/leave", count: 14 },
   { icon: <TrendingUp className="h-6 w-6" />, label: "Payroll", path: "/payroll" },
-  { icon: <Users className="h-6 w-6" />, label: "Team", path: "/team" },
+  { icon: <Users className="h-6 w-6" />, label: "Directory", path: "/directory" },
 ];
 
 const upcomingTasks = [
   { title: "Update Employee Handbook", due: "Today", priority: "high" as const },
   { title: "Benefits Enrollment Review", due: "Oct 28", priority: "medium" as const },
+];
+
+const moreLinks = [
+  { icon: <ClipboardCheck className="h-5 w-5" />, label: "Approvals", path: "/approvals", badge: "3" },
+  { icon: <Clock className="h-5 w-5" />, label: "Attendance", path: "/attendance" },
+  { icon: <BookUser className="h-5 w-5" />, label: "Employee Dashboard", path: "/dashboard" },
 ];
 
 export default function Index() {
@@ -42,7 +50,7 @@ export default function Index() {
             <Link
               key={action.label}
               to={action.path}
-              className="bg-card rounded-xl p-4 card-shadow border border-border flex flex-col gap-3 hover:border-primary/30 transition-colors"
+              className="bg-card rounded-xl p-4 card-shadow border border-border flex flex-col gap-3 hover:border-primary/30 transition-colors active:scale-[0.98]"
             >
               <div className="flex justify-between items-start">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -57,6 +65,35 @@ export default function Index() {
               <p className="font-bold">{action.label}</p>
             </Link>
           ))}
+        </div>
+
+        {/* More Links */}
+        <div>
+          <h2 className="text-lg font-bold mb-3">Quick Access</h2>
+          <div className="space-y-2">
+            {moreLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="bg-card rounded-xl p-4 card-shadow border border-border flex items-center justify-between hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    {link.icon}
+                  </div>
+                  <span className="font-semibold">{link.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {link.badge && (
+                    <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-0.5 rounded-full">
+                      {link.badge}
+                    </span>
+                  )}
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Upcoming Tasks */}
@@ -93,12 +130,12 @@ export default function Index() {
         </div>
 
         {/* Leave Balance Quick View */}
-        <div className="bg-card rounded-xl p-4 card-shadow border border-border">
+        <Link to="/leave" className="block bg-card rounded-xl p-4 card-shadow border border-border">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-lg font-bold">Leave Balance</h2>
-            <Link to="/leave" className="text-primary text-sm font-medium flex items-center gap-1">
+            <span className="text-primary text-sm font-medium flex items-center gap-1">
               Details <ChevronRight className="h-4 w-4" />
-            </Link>
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative w-16 h-16">
@@ -139,7 +176,7 @@ export default function Index() {
               </div>
             </div>
           </div>
-        </div>
+        </Link>
       </main>
 
       <BottomNav />
