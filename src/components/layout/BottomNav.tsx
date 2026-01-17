@@ -1,4 +1,12 @@
-import { Home, CheckSquare, Users, Settings, Calendar, DollarSign, User } from "lucide-react";
+import { 
+  Home, 
+  CheckSquare, 
+  Calendar, 
+  DollarSign, 
+  Clock,
+  Users,
+  ClipboardCheck
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +25,10 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <CheckSquare className="h-6 w-6" />,
-    activeIcon: <CheckSquare className="h-6 w-6 fill-current" />,
-    label: "Tasks",
-    path: "/tasks",
+    icon: <Clock className="h-6 w-6" />,
+    activeIcon: <Clock className="h-6 w-6 fill-current" />,
+    label: "Attend",
+    path: "/attendance",
   },
   {
     icon: <Calendar className="h-6 w-6" />,
