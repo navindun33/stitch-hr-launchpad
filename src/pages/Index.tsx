@@ -1,5 +1,7 @@
 import { UserHeader } from "@/components/layout/UserHeader";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { ClockInOutCard } from "@/components/clock/ClockInOutCard";
+import { useEmployeeCount } from "@/hooks/useEmployees";
 import { 
   CheckCircle, 
   Calendar, 
@@ -9,18 +11,8 @@ import {
   Clock,
   ClipboardCheck,
   BookUser,
-  LogIn,
-  LogOut
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
-
-const quickActions = [
-  { icon: <CheckCircle className="h-6 w-6" />, label: "Tasks", path: "/tasks", count: 5 },
-  { icon: <Calendar className="h-6 w-6" />, label: "Leave", path: "/leave", count: 14 },
-  { icon: <TrendingUp className="h-6 w-6" />, label: "Payroll", path: "/payroll" },
-  { icon: <Users className="h-6 w-6" />, label: "Directory", path: "/directory" },
-];
 
 const upcomingTasks = [
   { title: "Update Employee Handbook", due: "Today", priority: "high" as const },
@@ -34,38 +26,14 @@ const moreLinks = [
 ];
 
 export default function Index() {
-  const [isClockedIn, setIsClockedIn] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [clockInTime, setClockInTime] = useState<Date | null>(null);
+  const { data: employeeCount = 0 } = useEmployeeCount();
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isClockedIn) {
-      interval = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isClockedIn]);
-
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleClockIn = () => {
-    setIsClockedIn(true);
-    setClockInTime(new Date());
-    setElapsedTime(0);
-  };
-
-  const handleClockOut = () => {
-    setIsClockedIn(false);
-    setClockInTime(null);
-    setElapsedTime(0);
-  };
+  const quickActions = [
+    { icon: <CheckCircle className="h-6 w-6" />, label: "Tasks", path: "/tasks", count: 5 },
+    { icon: <Calendar className="h-6 w-6" />, label: "Leave", path: "/leave", count: 14 },
+    { icon: <TrendingUp className="h-6 w-6" />, label: "Payroll", path: "/payroll" },
+    { icon: <Users className="h-6 w-6" />, label: "Directory", path: "/directory", count: employeeCount || undefined },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -80,53 +48,8 @@ export default function Index() {
           </p>
         </div>
 
-        {/* Check In/Out Card */}
-        <div className="bg-card rounded-xl p-4 card-shadow border border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-lg font-bold">Today's Shift</h2>
-              <p className="text-muted-foreground text-sm">
-                {isClockedIn && clockInTime 
-                  ? `Clocked in at ${clockInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                  : "You haven't clocked in yet"
-                }
-              </p>
-            </div>
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              isClockedIn ? 'bg-green-100 text-green-600' : 'bg-muted text-muted-foreground'
-            }`}>
-              <Clock className="h-6 w-6" />
-            </div>
-          </div>
-
-          {isClockedIn && (
-            <div className="text-center mb-4">
-              <p className="text-3xl font-bold font-mono text-primary">{formatTime(elapsedTime)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Time elapsed</p>
-            </div>
-          )}
-
-          <button
-            onClick={isClockedIn ? handleClockOut : handleClockIn}
-            className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors ${
-              isClockedIn 
-                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' 
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-            }`}
-          >
-            {isClockedIn ? (
-              <>
-                <LogOut className="h-5 w-5" />
-                Clock Out
-              </>
-            ) : (
-              <>
-                <LogIn className="h-5 w-5" />
-                Clock In
-              </>
-            )}
-          </button>
-        </div>
+        {/* Clock In/Out Card */}
+        <ClockInOutCard />
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-2 gap-3">

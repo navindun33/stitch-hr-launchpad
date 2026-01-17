@@ -14,7 +14,235 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      attendance_records: {
+        Row: {
+          clock_in_latitude: number | null
+          clock_in_longitude: number | null
+          clock_in_time: string
+          clock_out_latitude: number | null
+          clock_out_longitude: number | null
+          clock_out_time: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          is_remote: boolean | null
+          status: string | null
+        }
+        Insert: {
+          clock_in_latitude?: number | null
+          clock_in_longitude?: number | null
+          clock_in_time?: string
+          clock_out_latitude?: number | null
+          clock_out_longitude?: number | null
+          clock_out_time?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_remote?: boolean | null
+          status?: string | null
+        }
+        Update: {
+          clock_in_latitude?: number | null
+          clock_in_longitude?: number | null
+          clock_in_time?: string
+          clock_out_latitude?: number | null
+          clock_out_longitude?: number | null
+          clock_out_time?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_remote?: boolean | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          department: string
+          email: string
+          hourly_rate: number
+          id: string
+          name: string
+          phone: string | null
+          supervisor_id: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          department: string
+          email: string
+          hourly_rate?: number
+          id?: string
+          name: string
+          phone?: string | null
+          supervisor_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string
+          email?: string
+          hourly_rate?: number
+          id?: string
+          name?: string
+          phone?: string | null
+          supervisor_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          read_at: string | null
+          receiver_id: string
+          sender_id: string
+          subject: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          read_at?: string | null
+          receiver_id: string
+          sender_id: string
+          subject?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          read_at?: string | null
+          receiver_id?: string
+          sender_id?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      office_locations: {
+        Row: {
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          radius_meters: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          radius_meters?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          radius_meters?: number
+        }
+        Relationships: []
+      }
+      remote_clockin_requests: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          latitude: number
+          longitude: number
+          reason: string | null
+          requested_at: string
+          responded_at: string | null
+          status: string | null
+          supervisor_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          reason?: string | null
+          requested_at?: string
+          responded_at?: string | null
+          status?: string | null
+          supervisor_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          reason?: string | null
+          requested_at?: string
+          responded_at?: string | null
+          status?: string | null
+          supervisor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_clockin_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remote_clockin_requests_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
