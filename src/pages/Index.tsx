@@ -23,6 +23,7 @@ const moreLinks = [
   { icon: <ClipboardCheck className="h-5 w-5" />, label: "Approvals", path: "/approvals", badge: "3" },
   { icon: <Clock className="h-5 w-5" />, label: "Attendance", path: "/attendance" },
   { icon: <BookUser className="h-5 w-5" />, label: "Employee Dashboard", path: "/dashboard" },
+  { icon: <Users className="h-5 w-5" />, label: "Admin Dashboard", path: "/admin" },
 ];
 
 export default function Index() {

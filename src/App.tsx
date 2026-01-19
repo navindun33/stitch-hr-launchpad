@@ -11,6 +11,8 @@ import PayrollPage from "./pages/PayrollPage";
 import AttendancePage from "./pages/AttendancePage";
 import DirectoryPage from "./pages/DirectoryPage";
 import ApprovalsPage from "./pages/ApprovalsPage";
+import AuthPage from "./pages/AuthPage";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +25,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/dashboard" element={<EmployeeDashboard />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/leave" element={<LeavePage />} />
