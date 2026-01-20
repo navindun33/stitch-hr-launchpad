@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { UserHeader } from "@/components/layout/UserHeader";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { ClockInOutCard } from "@/components/clock/ClockInOutCard";
@@ -11,8 +14,8 @@ import {
   Clock,
   ClipboardCheck,
   BookUser,
+  Loader2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const upcomingTasks = [
   { title: "Update Employee Handbook", due: "Today", priority: "high" as const },
@@ -27,7 +30,15 @@ const moreLinks = [
 ];
 
 export default function Index() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const { data: employeeCount = 0 } = useEmployeeCount();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
 
   const quickActions = [
     { icon: <CheckCircle className="h-6 w-6" />, label: "Tasks", path: "/tasks", count: 5 },
@@ -35,6 +46,14 @@ export default function Index() {
     { icon: <TrendingUp className="h-6 w-6" />, label: "Payroll", path: "/payroll" },
     { icon: <Users className="h-6 w-6" />, label: "Directory", path: "/directory", count: employeeCount || undefined },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
