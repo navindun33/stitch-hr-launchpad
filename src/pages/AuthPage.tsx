@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, useIsAdmin } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,7 +28,9 @@ const signupSchema = z.object({
 export default function AuthPage() {
   const navigate = useNavigate();
   const { user, loading, signIn, signUp } = useAuth();
+  const { isAdmin, isAdminOrManager, isLoading: rolesLoading } = useIsAdmin(user?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [waitingForRoles, setWaitingForRoles] = useState(false);
   
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -42,11 +44,30 @@ export default function AuthPage() {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
 
+  // Redirect based on role after login
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/home');
+    if (!loading && user && waitingForRoles && !rolesLoading) {
+      if (isAdminOrManager) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
+      setWaitingForRoles(false);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, rolesLoading, isAdminOrManager, waitingForRoles, navigate]);
+
+  // If already logged in, redirect based on role
+  useEffect(() => {
+    if (!loading && user && !waitingForRoles) {
+      if (!rolesLoading) {
+        if (isAdminOrManager) {
+          navigate('/admin');
+        } else {
+          navigate('/home');
+        }
+      }
+    }
+  }, [user, loading, rolesLoading, isAdminOrManager, waitingForRoles, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +95,7 @@ export default function AuthPage() {
       }
     } else {
       toast.success('Welcome back!');
-      navigate('/home');
+      setWaitingForRoles(true);
     }
   };
 
@@ -110,11 +131,12 @@ export default function AuthPage() {
       }
     } else {
       toast.success('Account created successfully! Welcome!');
+      // New signups go to home by default (they're regular employees)
       navigate('/home');
     }
   };
 
-  if (loading) {
+  if (loading || (user && rolesLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
