@@ -64,15 +64,88 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          code: string
+          created_at: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      departments: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           avatar_url: string | null
+          bank_account_number: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          company_id: string | null
           created_at: string
           department: string
           email: string
           hourly_rate: number
           id: string
           name: string
+          nic_number: string | null
           phone: string | null
           supervisor_id: string | null
           updated_at: string
@@ -80,12 +153,17 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          company_id?: string | null
           created_at?: string
           department: string
           email: string
           hourly_rate?: number
           id?: string
           name: string
+          nic_number?: string | null
           phone?: string | null
           supervisor_id?: string | null
           updated_at?: string
@@ -93,18 +171,30 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bank_account_number?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          company_id?: string | null
           created_at?: string
           department?: string
           email?: string
           hourly_rate?: number
           id?: string
           name?: string
+          nic_number?: string | null
           phone?: string | null
           supervisor_id?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employees_supervisor_id_fkey"
             columns: ["supervisor_id"]
