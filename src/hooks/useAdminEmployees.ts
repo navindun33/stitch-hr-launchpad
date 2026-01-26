@@ -13,6 +13,11 @@ export function useCreateEmployee() {
       phone?: string;
       supervisor_id?: string;
       user_id?: string;
+      company_id?: string;
+      nic_number?: string;
+      bank_name?: string;
+      bank_account_number?: string;
+      bank_branch?: string;
     }) => {
       const { data, error } = await supabase
         .from('employees')
@@ -46,6 +51,10 @@ export function useUpdateEmployee() {
       phone?: string;
       supervisor_id?: string | null;
       avatar_url?: string | null;
+      nic_number?: string | null;
+      bank_name?: string | null;
+      bank_account_number?: string | null;
+      bank_branch?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('employees')
