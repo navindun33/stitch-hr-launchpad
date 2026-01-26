@@ -11,6 +11,11 @@ export interface Employee {
   supervisor_id: string | null;
   avatar_url: string | null;
   phone: string | null;
+  company_id: string | null;
+  nic_number: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_branch: string | null;
   created_at: string;
   updated_at: string;
 }

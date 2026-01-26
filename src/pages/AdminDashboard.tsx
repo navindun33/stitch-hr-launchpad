@@ -7,7 +7,7 @@ import { useLeaveRequests } from '@/hooks/useLeave';
 import { usePayrollRecords } from '@/hooks/usePayroll';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, 
@@ -17,15 +17,19 @@ import {
   Shield,
   Loader2,
   AlertTriangle,
+  FolderOpen,
+  LogOut,
 } from 'lucide-react';
 import { EmployeeManagement } from '@/components/admin/EmployeeManagement';
 import { TaskManagement } from '@/components/admin/TaskManagement';
 import { LeaveManagement } from '@/components/admin/LeaveManagement';
 import { PayrollManagement } from '@/components/admin/PayrollManagement';
+import { DepartmentManagement } from '@/components/admin/DepartmentManagement';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { isAdmin, isAdminOrManager, isLoading: rolesLoading } = useIsAdmin(user?.id);
   const [activeTab, setActiveTab] = useState('employees');
 
@@ -38,6 +42,11 @@ export default function AdminDashboard() {
   const pendingTasks = tasks.filter(t => t.status === 'pending').length;
   const pendingPayroll = payrollRecords.filter(p => p.status === 'pending').length;
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   if (authLoading || rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -47,7 +56,7 @@ export default function AdminDashboard() {
   }
 
   if (!user) {
-    navigate('/auth');
+    navigate('/');
     return null;
   }
 
@@ -69,9 +78,22 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background pb-8">
-      <AppHeader title="Admin Dashboard" showBack />
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-lg font-bold">Admin Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
       
-      <main className="px-4 space-y-6">
+      <main className="px-4 py-4 space-y-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
@@ -91,8 +113,8 @@ export default function AdminDashboard() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <ClipboardList className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
+                  <ClipboardList className="h-5 w-5 text-accent-foreground" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{pendingTasks}</p>
@@ -105,8 +127,8 @@ export default function AdminDashboard() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{pendingLeave}</p>
@@ -119,8 +141,8 @@ export default function AdminDashboard() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{pendingPayroll}</p>
@@ -141,10 +163,14 @@ export default function AdminDashboard() {
 
         {/* Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="employees" className="text-xs sm:text-sm">
               <Users className="h-4 w-4 mr-1 hidden sm:inline" />
-              Employees
+              Staff
+            </TabsTrigger>
+            <TabsTrigger value="departments" className="text-xs sm:text-sm">
+              <FolderOpen className="h-4 w-4 mr-1 hidden sm:inline" />
+              Depts
             </TabsTrigger>
             <TabsTrigger value="tasks" className="text-xs sm:text-sm">
               <ClipboardList className="h-4 w-4 mr-1 hidden sm:inline" />
@@ -156,12 +182,16 @@ export default function AdminDashboard() {
             </TabsTrigger>
             <TabsTrigger value="payroll" className="text-xs sm:text-sm">
               <DollarSign className="h-4 w-4 mr-1 hidden sm:inline" />
-              Payroll
+              Pay
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="employees" className="mt-4">
             <EmployeeManagement />
+          </TabsContent>
+          
+          <TabsContent value="departments" className="mt-4">
+            <DepartmentManagement />
           </TabsContent>
           
           <TabsContent value="tasks" className="mt-4">
