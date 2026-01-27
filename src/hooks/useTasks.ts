@@ -7,6 +7,7 @@ export interface Task {
   description: string | null;
   assigned_to: string | null;
   created_by: string | null;
+  parent_id: string | null;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date: string | null;
@@ -22,6 +23,7 @@ export interface Task {
     id: string;
     name: string;
   };
+  subtasks?: Task[];
 }
 
 export function useTasks() {
@@ -41,6 +43,31 @@ export function useTasks() {
       return data as Task[];
     },
   });
+}
+
+// Helper function to build task tree from flat list
+export function buildTaskTree(tasks: Task[]): Task[] {
+  const taskMap = new Map<string, Task>();
+  const rootTasks: Task[] = [];
+
+  // First pass: create a map of all tasks
+  tasks.forEach(task => {
+    taskMap.set(task.id, { ...task, subtasks: [] });
+  });
+
+  // Second pass: build the tree structure
+  tasks.forEach(task => {
+    const taskWithSubtasks = taskMap.get(task.id)!;
+    if (task.parent_id && taskMap.has(task.parent_id)) {
+      const parent = taskMap.get(task.parent_id)!;
+      parent.subtasks = parent.subtasks || [];
+      parent.subtasks.push(taskWithSubtasks);
+    } else {
+      rootTasks.push(taskWithSubtasks);
+    }
+  });
+
+  return rootTasks;
 }
 
 export function useMyTasks(employeeId: string | undefined) {
@@ -71,6 +98,7 @@ export function useCreateTask() {
       description?: string;
       assigned_to?: string;
       created_by?: string;
+      parent_id?: string;
       priority?: 'low' | 'medium' | 'high' | 'urgent';
       due_date?: string;
     }) => {
