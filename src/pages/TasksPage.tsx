@@ -1,81 +1,135 @@
-import { useState } from "react";
-import { GitBranch } from "lucide-react";
+import { useState, useMemo } from "react";
+import { GitBranch, ChevronRight, ChevronDown, CornerDownRight } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { TabNav } from "@/components/ui/TabNav";
 import { TaskCard } from "@/components/tasks/TaskCard";
+import { useMyTasks, Task, buildTaskTree } from "@/hooks/useTasks";
+import { useCurrentEmployee } from "@/hooks/useEmployees";
+import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 const tabs = ["To Do", "In Progress", "Done"];
 
-const tasks = {
-  "To Do": [
-    {
-      id: 1,
-      title: "Update Employee Handbook",
-      category: "Internal HR",
-      dueDate: "Oct 24, 2023",
-      priority: "high" as const,
-      assignee: {
-        name: "Sarah Chen",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-      },
-    },
-    {
-      id: 2,
-      title: "Benefits Enrollment Review",
-      category: "Benefits",
-      dueDate: "Oct 28",
-      priority: "medium" as const,
-      status: "pending-approval" as const,
-      assignee: {
-        name: "Michael Brown",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-      },
-    },
-    {
-      id: 3,
-      title: "Quarterly Performance Sync",
-      category: "Management",
-      dueDate: "Nov 02, 2023",
-      priority: "low" as const,
-      assignee: {
-        name: "Emily Davis",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face",
-      },
-    },
-  ],
-  "In Progress": [
-    {
-      id: 4,
-      title: "New Hire Onboarding",
-      category: "Onboarding",
-      dueDate: "Oct 30",
-      priority: "high" as const,
-      assignee: {
-        name: "Alex Rivera",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-      },
-    },
-  ],
-  "Done": [
-    {
-      id: 5,
-      title: "Q3 Compliance Training",
-      category: "Training",
-      dueDate: "Oct 15",
-      priority: "medium" as const,
-      assignee: {
-        name: "Jordan Lee",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face",
-      },
-    },
-  ],
+const mapStatusToTab = (status: string): string => {
+  switch (status) {
+    case 'pending': return 'To Do';
+    case 'in_progress': return 'In Progress';
+    case 'completed': return 'Done';
+    case 'cancelled': return 'Done';
+    default: return 'To Do';
+  }
 };
+
+interface TaskTreeNodeProps {
+  task: Task;
+  level: number;
+  expandedTasks: Set<string>;
+  toggleExpanded: (id: string) => void;
+}
+
+function TaskTreeNode({ task, level, expandedTasks, toggleExpanded }: TaskTreeNodeProps) {
+  const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+  const isExpanded = expandedTasks.has(task.id);
+
+  return (
+    <div className={level > 0 ? 'ml-4 pl-4 border-l-2 border-muted' : ''}>
+      <div className="flex items-start gap-2">
+        {hasSubtasks ? (
+          <button
+            onClick={() => toggleExpanded(task.id)}
+            className="mt-4 p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+        ) : level > 0 ? (
+          <CornerDownRight className="h-4 w-4 text-muted-foreground mt-4 flex-shrink-0" />
+        ) : (
+          <div className="w-6" />
+        )}
+        
+        <div className="flex-1">
+          <TaskCard
+            title={task.title}
+            category={task.description || 'Task'}
+            dueDate={task.due_date ? format(new Date(task.due_date), 'MMM d, yyyy') : 'No due date'}
+            priority={task.priority as 'high' | 'medium' | 'low'}
+            onView={() => console.log("View task", task.id)}
+          />
+          {hasSubtasks && (
+            <Badge variant="outline" className="mt-1 ml-2 text-xs gap-1">
+              <GitBranch className="h-3 w-3" />
+              {task.subtasks!.length} subtask{task.subtasks!.length > 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {hasSubtasks && isExpanded && (
+        <div className="mt-2 space-y-2">
+          {task.subtasks!.map((subtask) => (
+            <TaskTreeNode
+              key={subtask.id}
+              task={subtask}
+              level={level + 1}
+              expandedTasks={expandedTasks}
+              toggleExpanded={toggleExpanded}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TasksPage() {
   const [activeTab, setActiveTab] = useState("To Do");
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
-  const currentTasks = tasks[activeTab as keyof typeof tasks] || [];
+  const { user } = useAuth();
+  const { data: currentEmployee, isLoading: employeeLoading } = useCurrentEmployee(user?.id);
+  const { data: tasks = [], isLoading: tasksLoading } = useMyTasks(currentEmployee?.id);
+
+  const isLoading = employeeLoading || tasksLoading;
+
+  // Build tree and filter by status
+  const taskTree = useMemo(() => buildTaskTree(tasks), [tasks]);
+
+  const filterTasksByStatus = (task: Task, tab: string): boolean => {
+    const taskMatchesTab = mapStatusToTab(task.status) === tab;
+    
+    // If task matches, include it
+    if (taskMatchesTab) return true;
+    
+    // If task has subtasks that match, include the parent
+    if (task.subtasks && task.subtasks.length > 0) {
+      return task.subtasks.some(subtask => filterTasksByStatus(subtask, tab));
+    }
+    
+    return false;
+  };
+
+  const currentTasks = useMemo(() => {
+    return taskTree.filter(task => filterTasksByStatus(task, activeTab));
+  }, [taskTree, activeTab]);
+
+  const toggleExpanded = (taskId: string) => {
+    setExpandedTasks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -94,36 +148,32 @@ export default function TasksPage() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto max-w-md mx-auto w-full p-4 space-y-4 pb-28">
-        {activeTab === "To Do" && (
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">
-            Today • Oct 24
-          </p>
-        )}
-
-        {currentTasks.map((task, index) => (
-          <div key={task.id}>
-            {activeTab === "To Do" && index === 2 && (
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mt-6 mb-2">
-                Next Week
-              </p>
-            )}
-            <TaskCard
-              title={task.title}
-              category={task.category}
-              dueDate={task.dueDate}
-              priority={task.priority}
-              status={task.status}
-              assignee={task.assignee}
-              onView={() => console.log("View task", task.id)}
-              onApprove={task.status === "pending-approval" ? () => console.log("Approve", task.id) : undefined}
-            />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ))}
-
-        {currentTasks.length === 0 && (
+        ) : currentTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <p className="text-sm">No tasks in this category</p>
           </div>
+        ) : (
+          <>
+            {activeTab === "To Do" && (
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">
+                Today • {format(new Date(), 'MMM d')}
+              </p>
+            )}
+
+            {currentTasks.map((task) => (
+              <TaskTreeNode
+                key={task.id}
+                task={task}
+                level={0}
+                expandedTasks={expandedTasks}
+                toggleExpanded={toggleExpanded}
+              />
+            ))}
+          </>
         )}
       </main>
 

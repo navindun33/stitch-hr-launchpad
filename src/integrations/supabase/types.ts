@@ -132,6 +132,50 @@ export type Database = {
           },
         ]
       }
+      employee_shifts: {
+        Row: {
+          created_at: string
+          days_of_week: number[]
+          employee_id: string
+          id: string
+          is_active: boolean
+          shift_end: string
+          shift_name: string
+          shift_start: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[]
+          employee_id: string
+          id?: string
+          is_active?: boolean
+          shift_end: string
+          shift_name?: string
+          shift_start: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[]
+          employee_id?: string
+          id?: string
+          is_active?: boolean
+          shift_end?: string
+          shift_name?: string
+          shift_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_shifts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           avatar_url: string | null
@@ -502,6 +546,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          parent_id: string | null
           priority: string
           status: string
           title: string
@@ -515,6 +560,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_id?: string | null
           priority?: string
           status?: string
           title: string
@@ -528,6 +574,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_id?: string | null
           priority?: string
           status?: string
           title?: string
@@ -546,6 +593,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
