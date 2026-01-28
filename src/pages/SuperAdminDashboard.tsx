@@ -131,7 +131,7 @@ export default function SuperAdminDashboard() {
   // Create company with admin
   const createCompany = useMutation({
     mutationFn: async () => {
-      // Create the company
+      // Create the company first
       const { data: company, error: companyError } = await supabase
         .from('companies')
         .insert({
@@ -146,36 +146,22 @@ export default function SuperAdminDashboard() {
       
       if (companyError) throw companyError;
 
-      // Create admin user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: adminEmail,
-        password: adminPassword,
-        email_confirm: true,
-        user_metadata: { name: adminName }
-      });
-
-      if (authError) {
-        // If we can't use admin API, create via edge function or regular signup
-        // For now, just create the company without the admin
-        toast.warning('Company created. Please create admin user manually.');
-        return company;
-      }
-
-      if (authData.user) {
-        // Create employee record
-        await supabase.from('employees').insert({
-          user_id: authData.user.id,
-          name: adminName,
+      // Create admin user via edge function
+      const { data: adminData, error: adminError } = await supabase.functions.invoke('create-user-with-password', {
+        body: {
           email: adminEmail,
+          password: adminPassword,
+          name: adminName,
           department: 'Administration',
           company_id: company.id,
-        });
-
-        // Assign admin role
-        await supabase.from('user_roles').insert({
-          user_id: authData.user.id,
           role: 'admin',
-        });
+        },
+      });
+
+      if (adminError || adminData?.error) {
+        // Rollback company creation if admin creation fails
+        await supabase.from('companies').delete().eq('id', company.id);
+        throw new Error(adminData?.error || adminError?.message || 'Failed to create admin user');
       }
 
       return company;
