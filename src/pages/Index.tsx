@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { UserHeader } from "@/components/layout/UserHeader";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { ClockInOutCard } from "@/components/clock/ClockInOutCard";
-import { useEmployeeCount } from "@/hooks/useEmployees";
+import { useEmployeeCount, useCurrentEmployee } from "@/hooks/useEmployees";
 import { 
   CheckCircle, 
   Calendar, 
@@ -32,6 +32,7 @@ const moreLinks = [
 export default function Index() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { data: currentEmployee } = useCurrentEmployee(user?.id);
   const { data: employeeCount = 0 } = useEmployeeCount();
 
   useEffect(() => {
@@ -69,7 +70,11 @@ export default function Index() {
         </div>
 
         {/* Clock In/Out Card */}
-        <ClockInOutCard />
+        <ClockInOutCard 
+          employeeId={currentEmployee?.id} 
+          supervisorId={currentEmployee?.supervisor_id || undefined}
+          workType={currentEmployee?.work_type || 'office'}
+        />
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-2 gap-3">

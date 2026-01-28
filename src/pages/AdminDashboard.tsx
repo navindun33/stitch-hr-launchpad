@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useIsAdmin } from '@/hooks/useAuth';
-import { useEmployees } from '@/hooks/useEmployees';
+import { useEmployees, useCurrentEmployee } from '@/hooks/useEmployees';
 import { useTasks } from '@/hooks/useTasks';
 import { useLeaveRequests } from '@/hooks/useLeave';
 import { usePayrollRecords } from '@/hooks/usePayroll';
@@ -19,12 +19,14 @@ import {
   AlertTriangle,
   FolderOpen,
   LogOut,
+  MapPin,
 } from 'lucide-react';
 import { EmployeeManagement } from '@/components/admin/EmployeeManagement';
 import { TaskManagement } from '@/components/admin/TaskManagement';
 import { LeaveManagement } from '@/components/admin/LeaveManagement';
 import { PayrollManagement } from '@/components/admin/PayrollManagement';
 import { DepartmentManagement } from '@/components/admin/DepartmentManagement';
+import { OfficeLocationManagement } from '@/components/admin/OfficeLocationManagement';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 export default function AdminDashboard() {
@@ -34,6 +36,8 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('employees');
 
   const { data: employees = [] } = useEmployees();
+  const { data: currentEmployee } = useCurrentEmployee(user?.id);
+  const companyId = currentEmployee?.company_id;
   const { data: tasks = [] } = useTasks();
   const { data: leaveRequests = [] } = useLeaveRequests();
   const { data: payrollRecords = [] } = usePayrollRecords();
@@ -163,7 +167,7 @@ export default function AdminDashboard() {
 
         {/* Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="employees" className="text-xs sm:text-sm">
               <Users className="h-4 w-4 mr-1 hidden sm:inline" />
               Staff
@@ -171,6 +175,10 @@ export default function AdminDashboard() {
             <TabsTrigger value="departments" className="text-xs sm:text-sm">
               <FolderOpen className="h-4 w-4 mr-1 hidden sm:inline" />
               Depts
+            </TabsTrigger>
+            <TabsTrigger value="locations" className="text-xs sm:text-sm">
+              <MapPin className="h-4 w-4 mr-1 hidden sm:inline" />
+              Offices
             </TabsTrigger>
             <TabsTrigger value="tasks" className="text-xs sm:text-sm">
               <ClipboardList className="h-4 w-4 mr-1 hidden sm:inline" />
@@ -192,6 +200,10 @@ export default function AdminDashboard() {
           
           <TabsContent value="departments" className="mt-4">
             <DepartmentManagement />
+          </TabsContent>
+          
+          <TabsContent value="locations" className="mt-4">
+            <OfficeLocationManagement companyId={companyId || undefined} />
           </TabsContent>
           
           <TabsContent value="tasks" className="mt-4">
