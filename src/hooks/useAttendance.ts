@@ -21,6 +21,7 @@ export interface OfficeLocation {
   latitude: number;
   longitude: number;
   radius_meters: number;
+  company_id: string | null;
 }
 
 export function useOfficeLocations() {

@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, password, name, department, hourly_rate, company_id, role, phone, nic_number, bank_name, bank_account_number, bank_branch } = await req.json();
+    const { email, password, name, department, hourly_rate, company_id, role, phone, nic_number, bank_name, bank_account_number, bank_branch, work_type } = await req.json();
 
     if (!email || !password || !name || !department) {
       return new Response(
@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
         bank_name,
         bank_account_number,
         bank_branch,
+        work_type: work_type || 'office',
       })
       .select()
       .single();

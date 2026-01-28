@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Loader2, Search, Mail, Phone, Building, CreditCard, IdCard, Clock, UserPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Search, Mail, Phone, Building, CreditCard, IdCard, Clock, UserPlus, MapPin, Home, Briefcase } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const DEFAULT_DEPARTMENTS = ['Engineering', 'Human Resources', 'Finance', 'Marketing', 'Sales', 'Operations', 'Legal', 'Support', 'General'];
@@ -60,6 +60,7 @@ export function EmployeeManagement() {
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankBranch, setBankBranch] = useState('');
   const [role, setRole] = useState('employee');
+  const [workType, setWorkType] = useState<'office' | 'remote' | 'hybrid'>('office');
   
   // Shift form state
   const [hasShift, setHasShift] = useState(false);
@@ -96,6 +97,7 @@ export function EmployeeManagement() {
     setBankAccountNumber('');
     setBankBranch('');
     setRole('employee');
+    setWorkType('office');
     setHasShift(false);
     setShiftName('Regular Shift');
     setShiftStart('09:00');
@@ -114,6 +116,7 @@ export function EmployeeManagement() {
     setBankName(employee.bank_name || '');
     setBankAccountNumber(employee.bank_account_number || '');
     setBankBranch(employee.bank_branch || '');
+    setWorkType(employee.work_type || 'office');
     
     const shifts = getEmployeeShifts(employee.id);
     if (shifts.length > 0) {
@@ -157,6 +160,7 @@ export function EmployeeManagement() {
           bank_name: bankName || null,
           bank_account_number: bankAccountNumber || null,
           bank_branch: bankBranch || null,
+          work_type: workType,
         },
       });
 
@@ -214,6 +218,7 @@ export function EmployeeManagement() {
         bank_name: bankName || undefined,
         bank_account_number: bankAccountNumber || undefined,
         bank_branch: bankBranch || undefined,
+        work_type: workType,
       });
 
       // Create shift if specified
@@ -250,6 +255,7 @@ export function EmployeeManagement() {
         bank_name: bankName || undefined,
         bank_account_number: bankAccountNumber || undefined,
         bank_branch: bankBranch || undefined,
+        work_type: workType,
       });
 
       // Handle shift changes
@@ -365,6 +371,55 @@ export function EmployeeManagement() {
           </SelectContent>
         </Select>
       </div>
+      
+      {/* Work Type Selection */}
+      <div className="space-y-2">
+        <Label>Work Type</Label>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setWorkType('office')}
+            className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors ${
+              workType === 'office'
+                ? 'bg-primary/10 border-primary text-primary'
+                : 'bg-background border-border hover:border-primary/50'
+            }`}
+          >
+            <Briefcase className="h-4 w-4" />
+            <span className="text-xs font-medium">Office</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setWorkType('remote')}
+            className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors ${
+              workType === 'remote'
+                ? 'bg-primary/10 border-primary text-primary'
+                : 'bg-background border-border hover:border-primary/50'
+            }`}
+          >
+            <Home className="h-4 w-4" />
+            <span className="text-xs font-medium">Remote</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setWorkType('hybrid')}
+            className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors ${
+              workType === 'hybrid'
+                ? 'bg-primary/10 border-primary text-primary'
+                : 'bg-background border-border hover:border-primary/50'
+            }`}
+          >
+            <MapPin className="h-4 w-4" />
+            <span className="text-xs font-medium">Hybrid</span>
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {workType === 'office' && 'Location validated on clock-in (must be within office radius)'}
+          {workType === 'remote' && 'No location validation required'}
+          {workType === 'hybrid' && 'Location validation for office days'}
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor={`${isEdit ? 'edit-' : ''}hourlyRate`}>Hourly Rate ($)</Label>
@@ -604,6 +659,10 @@ export function EmployeeManagement() {
                             NIC: {employee.nic_number}
                           </p>
                         )}
+                        <Badge variant={employee.work_type === 'remote' ? 'default' : employee.work_type === 'hybrid' ? 'secondary' : 'outline'} className="text-xs gap-1">
+                          {employee.work_type === 'remote' ? <Home className="h-3 w-3" /> : employee.work_type === 'hybrid' ? <MapPin className="h-3 w-3" /> : <Briefcase className="h-3 w-3" />}
+                          {employee.work_type === 'remote' ? 'Remote' : employee.work_type === 'hybrid' ? 'Hybrid' : 'Office'}
+                        </Badge>
                         {shifts.length > 0 ? (
                           <Badge variant="outline" className="text-xs gap-1">
                             <Clock className="h-3 w-3" />

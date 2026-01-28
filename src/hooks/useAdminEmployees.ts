@@ -18,6 +18,7 @@ export function useCreateEmployee() {
       bank_name?: string;
       bank_account_number?: string;
       bank_branch?: string;
+      work_type?: 'office' | 'remote' | 'hybrid';
     }) => {
       const { data, error } = await supabase
         .from('employees')
@@ -55,6 +56,7 @@ export function useUpdateEmployee() {
       bank_name?: string | null;
       bank_account_number?: string | null;
       bank_branch?: string | null;
+      work_type?: 'office' | 'remote' | 'hybrid';
     }) => {
       const { data, error } = await supabase
         .from('employees')

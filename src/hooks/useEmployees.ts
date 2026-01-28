@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Employee {
@@ -16,6 +17,7 @@ export interface Employee {
   bank_name: string | null;
   bank_account_number: string | null;
   bank_branch: string | null;
+  work_type: 'office' | 'remote' | 'hybrid';
   created_at: string;
   updated_at: string;
 }

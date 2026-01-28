@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, LogIn, LogOut, MapPin, Send, AlertCircle, Loader2, AlertTriangle, Timer } from 'lucide-react';
+import { Clock, LogIn, LogOut, MapPin, Send, AlertCircle, Loader2, AlertTriangle, Timer, Home, Briefcase } from 'lucide-react';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useOfficeLocations, useActiveAttendance, useClockIn, useClockOut } from '@/hooks/useAttendance';
 import { useMyPendingRequest, useCreateRemoteRequest } from '@/hooks/useRemoteClockIn';
@@ -20,9 +20,10 @@ import { Badge } from '@/components/ui/badge';
 interface ClockInOutCardProps {
   employeeId?: string;
   supervisorId?: string;
+  workType?: 'office' | 'remote' | 'hybrid';
 }
 
-export function ClockInOutCard({ employeeId, supervisorId }: ClockInOutCardProps) {
+export function ClockInOutCard({ employeeId, supervisorId, workType = 'office' }: ClockInOutCardProps) {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showRemoteDialog, setShowRemoteDialog] = useState(false);
   const [remoteReason, setRemoteReason] = useState('');
@@ -142,6 +143,21 @@ export function ClockInOutCard({ employeeId, supervisorId }: ClockInOutCardProps
       }
     }
 
+    // Remote employees can clock in directly without location validation
+    if (workType === 'remote') {
+      try {
+        await clockIn.mutateAsync({
+          employeeId,
+          isRemote: true,
+        });
+        toast.success('Clocked in successfully (Remote)!');
+      } catch (error) {
+        toast.error('Failed to clock in');
+      }
+      return;
+    }
+
+    // Office and hybrid employees need location validation
     setIsCheckingLocation(true);
 
     try {
@@ -169,7 +185,7 @@ export function ClockInOutCard({ employeeId, supervisorId }: ClockInOutCardProps
       }
 
       if (isWithinOffice) {
-        // Clock in directly
+        // Clock in directly at office
         await clockIn.mutateAsync({
           employeeId,
           latitude: userLat,
@@ -178,7 +194,7 @@ export function ClockInOutCard({ employeeId, supervisorId }: ClockInOutCardProps
         });
         toast.success('Clocked in successfully!');
       } else {
-        // Show remote clock-in dialog
+        // Not within office radius - show WFH request dialog
         setShowRemoteDialog(true);
       }
     } catch (error) {

@@ -194,6 +194,7 @@ export type Database = {
           supervisor_id: string | null
           updated_at: string
           user_id: string | null
+          work_type: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -212,6 +213,7 @@ export type Database = {
           supervisor_id?: string | null
           updated_at?: string
           user_id?: string | null
+          work_type?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -230,6 +232,7 @@ export type Database = {
           supervisor_id?: string | null
           updated_at?: string
           user_id?: string | null
+          work_type?: string | null
         }
         Relationships: [
           {
@@ -402,6 +405,7 @@ export type Database = {
       }
       office_locations: {
         Row: {
+          company_id: string | null
           created_at: string
           id: string
           latitude: number
@@ -410,6 +414,7 @@ export type Database = {
           radius_meters: number
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           id?: string
           latitude: number
@@ -418,6 +423,7 @@ export type Database = {
           radius_meters?: number
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           id?: string
           latitude?: number
@@ -425,7 +431,15 @@ export type Database = {
           name?: string
           radius_meters?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "office_locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll_records: {
         Row: {
