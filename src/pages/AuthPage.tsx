@@ -31,7 +31,7 @@ const signupSchema = z.object({
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, signOut } = useAuth();
   const { isAdmin, isAdminOrManager, isLoading: rolesLoading } = useIsAdmin(user?.id);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [waitingForRoles, setWaitingForRoles] = useState(false);
@@ -79,12 +79,23 @@ export default function AuthPage() {
     const { data, error } = await supabase
       .from('companies')
       .select('id')
-      .eq('code', code.toLowerCase())
+      .eq('code', code.toLowerCase().trim())
       .eq('status', 'approved')
       .maybeSingle();
     
     if (error || !data) return null;
     return data;
+  };
+
+  const validateUserBelongsToCompany = async (userId: string, companyId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle();
+    
+    return !!data;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -115,19 +126,32 @@ export default function AuthPage() {
       return;
     }
 
-    const { error } = await signIn(loginEmail, loginPassword);
-    setIsSubmitting(false);
-
+    const { data, error } = await signIn(loginEmail, loginPassword);
+    
     if (error) {
+      setIsSubmitting(false);
       if (error.message.includes('Invalid login credentials')) {
         toast.error('Invalid email or password');
       } else {
         toast.error(error.message);
       }
-    } else {
-      toast.success('Welcome back!');
-      setWaitingForRoles(true);
+      return;
     }
+
+    // Verify user belongs to this company
+    if (data?.user) {
+      const belongsToCompany = await validateUserBelongsToCompany(data.user.id, company.id);
+      if (!belongsToCompany) {
+        await signOut();
+        setLoginErrors({ companyCode: 'You are not registered with this company' });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    setIsSubmitting(false);
+    toast.success('Welcome back!');
+    setWaitingForRoles(true);
   };
 
   const handleSignup = async (e: React.FormEvent) => {
