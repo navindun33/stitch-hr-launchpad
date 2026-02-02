@@ -13,8 +13,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface OfficeLocation {
   id: string;
   name: string;
-  latitude: number;
-  longitude: number;
+  // Postgres `numeric` may arrive as string via API depending on configuration.
+  latitude: number | string;
+  longitude: number | string;
   radius_meters: number;
   company_id: string | null;
   created_at: string;
@@ -34,6 +35,12 @@ export function OfficeLocationManagement({ companyId }: OfficeLocationManagement
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radius, setRadius] = useState('50');
+
+  const formatCoord = (value: number | string) => {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n.toFixed(6);
+  };
 
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ['office-locations', companyId],
@@ -134,8 +141,8 @@ export function OfficeLocationManagement({ companyId }: OfficeLocationManagement
   const openEditDialog = (location: OfficeLocation) => {
     setEditingLocation(location);
     setName(location.name);
-    setLatitude(location.latitude.toString());
-    setLongitude(location.longitude.toString());
+    setLatitude(String(location.latitude ?? ''));
+    setLongitude(String(location.longitude ?? ''));
     setRadius(location.radius_meters.toString());
   };
 
@@ -320,7 +327,7 @@ export function OfficeLocationManagement({ companyId }: OfficeLocationManagement
                   <div className="flex-1">
                     <h4 className="font-semibold">{location.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                      {formatCoord(location.latitude)}, {formatCoord(location.longitude)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Radius: {location.radius_meters}m

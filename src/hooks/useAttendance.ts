@@ -18,8 +18,8 @@ export interface AttendanceRecord {
 export interface OfficeLocation {
   id: string;
   name: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | string;
+  longitude: number | string;
   radius_meters: number;
   company_id: string | null;
 }
@@ -33,7 +33,12 @@ export function useOfficeLocations() {
         .select('*');
       
       if (error) throw error;
-      return data as OfficeLocation[];
+      return (data ?? []).map((l) => ({
+        ...l,
+        latitude: typeof l.latitude === 'number' ? l.latitude : Number(l.latitude),
+        longitude: typeof l.longitude === 'number' ? l.longitude : Number(l.longitude),
+        radius_meters: typeof l.radius_meters === 'number' ? l.radius_meters : Number(l.radius_meters),
+      })) as OfficeLocation[];
     },
   });
 }
