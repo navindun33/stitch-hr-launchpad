@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
@@ -22,9 +22,30 @@ import {
   Search,
   AlertTriangle,
   Clock,
-  Shield
+  Shield,
+  Pencil,
+  Trash2,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Company {
   id: string;
@@ -35,6 +56,22 @@ interface Company {
   approved_at: string | null;
 }
 
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+  company_id: string | null;
+  user_id: string | null;
+  work_type: string | null;
+  hourly_rate: number;
+}
+
+interface UserRole {
+  user_id: string;
+  role: string;
+}
+
 export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
@@ -43,6 +80,7 @@ export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState('pending');
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null);
   
   // New company form
   const [companyName, setCompanyName] = useState('');
@@ -50,6 +88,28 @@ export default function SuperAdminDashboard() {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminName, setAdminName] = useState('');
+
+  // Edit company
+  const [isEditCompanyOpen, setIsEditCompanyOpen] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [editCompanyName, setEditCompanyName] = useState('');
+  const [editCompanyCode, setEditCompanyCode] = useState('');
+
+  // Delete company
+  const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
+
+  // Edit user
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<Employee | null>(null);
+  const [editUserName, setEditUserName] = useState('');
+  const [editUserEmail, setEditUserEmail] = useState('');
+  const [editUserDepartment, setEditUserDepartment] = useState('');
+  const [editUserWorkType, setEditUserWorkType] = useState('office');
+  const [editUserRole, setEditUserRole] = useState('employee');
+
+  // Delete user
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteUserAuthId, setDeleteUserAuthId] = useState<string | null>(null);
 
   // Check if user is super admin
   useEffect(() => {
@@ -84,6 +144,42 @@ export default function SuperAdminDashboard() {
       return data as Company[];
     },
     enabled: isSuperAdmin === true,
+  });
+
+  // Fetch employees for expanded company
+  const { data: companyEmployees = [] } = useQuery({
+    queryKey: ['company-employees', expandedCompanyId],
+    queryFn: async () => {
+      if (!expandedCompanyId) return [];
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('company_id', expandedCompanyId)
+        .order('name');
+      
+      if (error) throw error;
+      return data as Employee[];
+    },
+    enabled: !!expandedCompanyId,
+  });
+
+  // Fetch user roles for employees
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ['user-roles', expandedCompanyId],
+    queryFn: async () => {
+      if (!expandedCompanyId || companyEmployees.length === 0) return [];
+      const userIds = companyEmployees.filter(e => e.user_id).map(e => e.user_id!);
+      if (userIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
+      
+      if (error) throw error;
+      return data as UserRole[];
+    },
+    enabled: companyEmployees.length > 0,
   });
 
   // Approve company mutation
@@ -125,6 +221,144 @@ export default function SuperAdminDashboard() {
     },
     onError: () => {
       toast.error('Failed to reject company');
+    },
+  });
+
+  // Update company mutation
+  const updateCompany = useMutation({
+    mutationFn: async ({ id, name, code }: { id: string; name: string; code: string }) => {
+      const { error } = await supabase
+        .from('companies')
+        .update({ name, code: code.toLowerCase().replace(/\s+/g, '-') })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      toast.success('Company updated successfully');
+      setIsEditCompanyOpen(false);
+      setEditingCompany(null);
+    },
+    onError: () => {
+      toast.error('Failed to update company');
+    },
+  });
+
+  // Delete company mutation
+  const deleteCompany = useMutation({
+    mutationFn: async (companyId: string) => {
+      // First delete all employees in the company
+      const { data: employees } = await supabase
+        .from('employees')
+        .select('user_id')
+        .eq('company_id', companyId);
+      
+      // Delete associated auth users via edge function
+      if (employees) {
+        for (const emp of employees) {
+          if (emp.user_id) {
+            await supabase.functions.invoke('delete-user', {
+              body: { user_id: emp.user_id },
+            });
+          }
+        }
+      }
+
+      // Delete the company (this will cascade delete employees due to FK)
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      toast.success('Company deleted successfully');
+      setDeleteCompanyId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete company');
+    },
+  });
+
+  // Update employee mutation
+  const updateEmployee = useMutation({
+    mutationFn: async ({ 
+      id, 
+      name, 
+      email, 
+      department, 
+      work_type,
+      user_id,
+      newRole 
+    }: { 
+      id: string; 
+      name: string; 
+      email: string; 
+      department: string;
+      work_type: string;
+      user_id: string | null;
+      newRole: string;
+    }) => {
+      // Update employee
+      const { error: empError } = await supabase
+        .from('employees')
+        .update({ name, email, department, work_type })
+        .eq('id', id);
+      
+      if (empError) throw empError;
+
+      // Update role if user_id exists
+      if (user_id) {
+        // Remove existing roles (except super_admin)
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user_id)
+          .neq('role', 'super_admin');
+        
+        // Add new role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({ user_id, role: newRole as 'admin' | 'manager' | 'employee' });
+        
+        if (roleError) throw roleError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-employees'] });
+      queryClient.invalidateQueries({ queryKey: ['user-roles'] });
+      toast.success('User updated successfully');
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+    },
+    onError: () => {
+      toast.error('Failed to update user');
+    },
+  });
+
+  // Delete user mutation
+  const deleteUser = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      });
+      
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || 'Failed to delete user');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-employees'] });
+      queryClient.invalidateQueries({ queryKey: ['user-roles'] });
+      toast.success('User deleted successfully');
+      setDeleteUserId(null);
+      setDeleteUserAuthId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete user');
     },
   });
 
@@ -188,6 +422,33 @@ export default function SuperAdminDashboard() {
   const handleLogout = async () => {
     await signOut();
     navigate('/super-admin-login');
+  };
+
+  const openEditCompanyDialog = (company: Company) => {
+    setEditingCompany(company);
+    setEditCompanyName(company.name);
+    setEditCompanyCode(company.code);
+    setIsEditCompanyOpen(true);
+  };
+
+  const openEditUserDialog = (employee: Employee) => {
+    setEditingUser(employee);
+    setEditUserName(employee.name);
+    setEditUserEmail(employee.email);
+    setEditUserDepartment(employee.department);
+    setEditUserWorkType(employee.work_type || 'office');
+    
+    // Find user's role
+    const role = userRoles.find(r => r.user_id === employee.user_id);
+    setEditUserRole(role?.role || 'employee');
+    
+    setIsEditUserOpen(true);
+  };
+
+  const getUserRole = (userId: string | null) => {
+    if (!userId) return 'No account';
+    const role = userRoles.find(r => r.user_id === userId);
+    return role?.role || 'employee';
   };
 
   const pendingCompanies = companies.filter(c => c.status === 'pending');
@@ -414,11 +675,16 @@ export default function SuperAdminDashboard() {
                 <Card key={company.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div 
+                        className="flex items-center gap-3 flex-1 cursor-pointer"
+                        onClick={() => setExpandedCompanyId(
+                          expandedCompanyId === company.id ? null : company.id
+                        )}
+                      >
                         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Building2 className="h-5 w-5 text-primary" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-semibold">{company.name}</h3>
                           <p className="text-sm text-muted-foreground">
                             Code: {company.code}
@@ -427,41 +693,138 @@ export default function SuperAdminDashboard() {
                             Registered: {new Date(company.created_at).toLocaleDateString()}
                           </p>
                         </div>
+                        {company.status === 'approved' && (
+                          expandedCompanyId === company.id ? 
+                            <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        )}
                       </div>
                       
-                      {company.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-primary"
-                            onClick={() => approveCompany.mutate(company.id)}
-                            disabled={approveCompany.isPending}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive"
-                            onClick={() => rejectCompany.mutate(company.id)}
-                            disabled={rejectCompany.isPending}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {company.status === 'approved' && (
-                        <Badge className="badge-approved">
-                          Approved
-                        </Badge>
-                      )}
-                      
-                      {company.status === 'rejected' && (
-                        <Badge variant="destructive">Rejected</Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {company.status === 'pending' && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-primary"
+                              onClick={() => approveCompany.mutate(company.id)}
+                              disabled={approveCompany.isPending}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive"
+                              onClick={() => rejectCompany.mutate(company.id)}
+                              disabled={rejectCompany.isPending}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        
+                        {company.status === 'approved' && (
+                          <>
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                              Approved
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEditCompanyDialog(company)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => setDeleteCompanyId(company.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        
+                        {company.status === 'rejected' && (
+                          <>
+                            <Badge variant="destructive">Rejected</Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => setDeleteCompanyId(company.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Expanded Users Section */}
+                    {expandedCompanyId === company.id && company.status === 'approved' && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-medium flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Users ({companyEmployees.length})
+                          </h4>
+                        </div>
+                        
+                        {companyEmployees.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No users in this company
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {companyEmployees.map((employee) => (
+                              <div 
+                                key={employee.id}
+                                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                              >
+                                <div>
+                                  <p className="font-medium">{employee.name}</p>
+                                  <p className="text-sm text-muted-foreground">{employee.email}</p>
+                                  <div className="flex gap-2 mt-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {employee.department}
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {getUserRole(employee.user_id)}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {employee.work_type || 'office'}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => openEditUserDialog(employee)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      setDeleteUserId(employee.id);
+                                      setDeleteUserAuthId(employee.user_id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))
@@ -469,6 +832,170 @@ export default function SuperAdminDashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Edit Company Dialog */}
+      <Dialog open={isEditCompanyOpen} onOpenChange={setIsEditCompanyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Company</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Company Name</Label>
+              <Input
+                value={editCompanyName}
+                onChange={(e) => setEditCompanyName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Company Code</Label>
+              <Input
+                value={editCompanyCode}
+                onChange={(e) => setEditCompanyCode(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditCompanyOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => editingCompany && updateCompany.mutate({
+                id: editingCompany.id,
+                name: editCompanyName,
+                code: editCompanyCode,
+              })}
+              disabled={updateCompany.isPending}
+            >
+              {updateCompany.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input
+                value={editUserName}
+                onChange={(e) => setEditUserName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editUserEmail}
+                onChange={(e) => setEditUserEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Department</Label>
+              <Input
+                value={editUserDepartment}
+                onChange={(e) => setEditUserDepartment(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Work Type</Label>
+              <Select value={editUserWorkType} onValueChange={setEditUserWorkType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="office">Office</SelectItem>
+                  <SelectItem value="remote">Remote</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editUserRole} onValueChange={setEditUserRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="employee">Employee</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => editingUser && updateEmployee.mutate({
+                id: editingUser.id,
+                name: editUserName,
+                email: editUserEmail,
+                department: editUserDepartment,
+                work_type: editUserWorkType,
+                user_id: editingUser.user_id,
+                newRole: editUserRole,
+              })}
+              disabled={updateEmployee.isPending}
+            >
+              {updateEmployee.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Company Confirmation */}
+      <AlertDialog open={!!deleteCompanyId} onOpenChange={() => setDeleteCompanyId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Company?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the company and all its users. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteCompanyId && deleteCompany.mutate(deleteCompanyId)}
+            >
+              {deleteCompany.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirmation */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={() => { setDeleteUserId(null); setDeleteUserAuthId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the user and their account. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteUserAuthId && deleteUser.mutate({ userId: deleteUserAuthId })}
+            >
+              {deleteUser.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
